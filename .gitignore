@@ -36,3 +36,7 @@ venv/
 *.swp
 .idea/
 .vscode/
+
+# Local dogfooding: project-skill symlinks into skills/ and agents/
+.claude/skills/
+.claude/agents/

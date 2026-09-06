@@ -32,6 +32,7 @@ One-line scope statement for the role.
 ## EDUCATION
 ### Institution Name | Degree | 2018 - 2022
 Location.
+*Relevant coursework:* Course, Course, Course.
 
 ## CERTIFICATIONS
 - Credential, issuer, year.
@@ -46,8 +47,15 @@ Location.
 | SKILLS | `**Category**` then a comma list. Reorder categories and items by relevance. |
 | EXPERIENCE | Employer, then projects nested beneath. **Client work only.** |
 | PERSONAL PROJECTS | Own top-level section. Droppable when space is tight. |
-| EDUCATION | Copied verbatim. |
+| EDUCATION | Copied verbatim. The degree name may never be altered. |
 | CERTIFICATIONS | **Always emitted.** Never drop an entry. |
+
+The coursework line is optional. Emit it only when the master carries
+`education.coursework` and the role is close enough to that coursework to make
+it worth the space, picking the courses that match the job description. It
+exists so a degree title that undersells the actual study can be shown
+truthfully. **The degree name itself is never adjusted to suit a posting** -
+the verifier treats any change to a credential as a BLOCKER.
 
 `PERSONAL PROJECTS` is the only optional section. Every other heading must be
 present, and all of them must appear in the order above.
