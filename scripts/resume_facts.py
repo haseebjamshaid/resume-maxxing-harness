@@ -35,8 +35,10 @@ DATE_RE = re.compile(
 
 # A numeric claim. The lookbehind stops digits embedded in identifiers
 # (Neo4j, FTS5, React19) from being read as standalone figures.
+# `%` and `+` must touch the digits: in "Next.js 14 + React" the plus is a
+# separator between framework names, not a suffix meaning "14 or more".
 NUMBER_RE = re.compile(
-    r"(?<![A-Za-z0-9.])~?\$?\d[\d,]*(?:\.\d+)?\s*(?:%|\+|GB|MB|TB|KB)?",
+    r"(?<![A-Za-z0-9.])~?\$?\d[\d,]*(?:\.\d+)?(?:%|\+|\s?(?:GB|MB|TB|KB))?",
     re.IGNORECASE,
 )
 

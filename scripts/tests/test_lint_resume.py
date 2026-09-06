@@ -14,6 +14,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import lint_resume as lr  # noqa: E402
+import resume_facts as rf  # noqa: E402
 
 from conftest import CLEAN_PROVENANCE, CLEAN_RESUME  # noqa: E402
 
@@ -62,6 +63,21 @@ def test_whitespace_in_number_is_tolerated(facts) -> None:
     """'~16 GB' and '~16GB' are the same claim, only formatted differently."""
     resume = "- Kept the model resident within a ~16GB budget."
     assert lr.check_numbers(resume, facts) == ()
+
+
+def test_a_plus_used_as_a_separator_is_not_a_number_suffix() -> None:
+    """In "Next.js 14 + React" the plus joins two names; it does not mean 14+.
+
+    Reading it as "14+" made a resume fail against a master that said "14".
+    """
+    got = rf.extract_numbers("Next.js 14 + React", strip_header=False)
+    assert got == ("14",)
+
+
+def test_a_unit_may_be_separated_from_its_number() -> None:
+    """'~16 GB' and '~16GB' are one claim; the unit is part of the figure."""
+    assert rf.extract_numbers("a ~16 GB budget", strip_header=False) == ("~16gb",)
+    assert rf.extract_numbers("a ~16GB budget", strip_header=False) == ("~16gb",)
 
 
 def test_dates_do_not_leak_into_the_number_scan(facts) -> None:
