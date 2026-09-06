@@ -1,0 +1,23 @@
+{
+  "name": "resume-maxxing",
+  "version": "0.1.0",
+  "description": "Tailor a resume to a job description with hard anti-fabrication guardrails. Every number, technology and date in the output must trace verbatim to your master resume, enforced by deterministic checks plus an independent fresh-context audit.",
+  "author": {
+    "name": "haseebjamshaid",
+    "url": "https://github.com/haseebjamshaid"
+  },
+  "homepage": "https://github.com/haseebjamshaid/resume-maxxing-harness",
+  "repository": "https://github.com/haseebjamshaid/resume-maxxing-harness",
+  "license": "MIT",
+  "keywords": [
+    "resume",
+    "cover-letter",
+    "job-application",
+    "ats",
+    "tailoring",
+    "anti-fabrication"
+  ],
+  "skills": [
+    "./skills/"
+  ]
+}

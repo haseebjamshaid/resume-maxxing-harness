@@ -1,0 +1,27 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "resume-maxxing-harness",
+  "description": "Resume tailoring harness with verifiable, non-fabricating output.",
+  "owner": {
+    "name": "haseebjamshaid",
+    "url": "https://github.com/haseebjamshaid"
+  },
+  "plugins": [
+    {
+      "name": "resume-maxxing",
+      "source": "./",
+      "description": "Tailor a resume to a job description with hard anti-fabrication guardrails. Accepts the job description as text, a URL, or a file.",
+      "version": "0.1.0",
+      "author": {
+        "name": "haseebjamshaid",
+        "url": "https://github.com/haseebjamshaid"
+      },
+      "homepage": "https://github.com/haseebjamshaid/resume-maxxing-harness",
+      "repository": "https://github.com/haseebjamshaid/resume-maxxing-harness",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": ["resume", "cover-letter", "job-application", "ats"],
+      "strict": false
+    }
+  ]
+}

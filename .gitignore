@@ -1,0 +1,37 @@
+# ---------------------------------------------------------------------------
+# PRIVACY: this repository is PUBLIC and the master resume contains a phone
+# number and a personal email address. Nothing derived from it may be tracked.
+# ---------------------------------------------------------------------------
+
+# Master resume: ignore everything except the committed scaffolding
+master_resume/*
+!master_resume/.gitkeep
+!master_resume/TEMPLATE.md
+
+# Per-application output: tailored resumes, cover letters, JDs, provenance
+output/*
+!output/.gitkeep
+
+# Derived caches (contain verbatim resume content)
+*.ledger.md
+.facts.json
+
+# Resume source documents anywhere in the tree (backstop)
+*.pdf
+*.docx
+*.doc
+*.rtf
+*.odt
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
