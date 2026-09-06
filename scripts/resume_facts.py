@@ -311,7 +311,7 @@ def extract_tech_tokens(text: str) -> tuple[str, ...]:
 def extract_proper_phrases(text: str) -> tuple[str, ...]:
     """Runs of two or more consecutive capitalised, non-generic tokens.
 
-    A project name like `Backflow Prevention Assembly Platform` is one claim,
+    A project name like `Acme Assembly Management Platform` is one claim,
     not four, so it is verified and reported as a single phrase. Runs never
     cross a comma, semicolon, bracket or slash, so a comma-separated skills
     list is not mistaken for a single multi-word product name.

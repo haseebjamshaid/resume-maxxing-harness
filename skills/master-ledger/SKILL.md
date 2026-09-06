@@ -63,16 +63,16 @@ rephrasing, no tightening, no improving.
 [skills.data-eng] ClickHouse, DLT, ETL / ELT, Prefect
 
 ## EXPERIENCE
-### Carbonteq | Senior Software Engineer | June 2022 - Present
-[exp.carbonteq.scope] Role scope line, copied verbatim.
+### Employer Name | Senior Software Engineer | June 2022 - Present
+[exp.employer.scope] Role scope line, copied verbatim.
 
 #### Healthcare Analytics ELT Platform *(Data Engineer, 2025 - present)*
-- [exp.carbonteq.p1.b1] Owned the analytics transformation layer across 15+ healthcare data domains.
-- [exp.carbonteq.p1.b2] Implemented CDC / merge-based incremental loading from MySQL into ClickHouse using DLT.
+- [exp.employer.p1.b1] Owned the analytics transformation layer across 15+ data domains.
+- [exp.employer.p1.b2] Implemented CDC / merge-based incremental loading from MySQL into ClickHouse using DLT.
 
 ## PERSONAL PROJECTS
-### Throughline: Local-First AI Second Brain *(Full-Stack, Python / FastAPI + React 19)*
-- [proj.throughline.b1] Built a FastAPI backend over a hybrid sqlite-vec and FTS5 index.
+### Side Project Name *(Full-Stack, Python / FastAPI + React 19)*
+- [proj.sideproject.b1] Built a FastAPI backend over a hybrid sqlite-vec and FTS5 index.
 
 ## EDUCATION
 ### Institution | Degree | 2018 - 2022
