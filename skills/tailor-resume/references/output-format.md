@@ -106,8 +106,8 @@ Every bullet under EXPERIENCE and PERSONAL PROJECTS needs a record in
   "emitted": [
     {
       "path": "EXPERIENCE.acme.projects[0].bullets[1]",
-      "ledger_id": "exp.acme.p1.b2",
-      "original": "the exact ledger text, copied character for character",
+      "source_id": "exp.acme.p1.b2",
+      "original": "the master's text at that id, character for character",
       "value": "the emitted bullet text",
       "reason": "why this earns space against this job description"
     }
@@ -115,6 +115,7 @@ Every bullet under EXPERIENCE and PERSONAL PROJECTS needs a record in
 }
 ```
 
-`original` must be copied from the ledger verbatim. It is checked back against
-the ledger, so inventing a plausible-looking source does not work: a bullet
-with no real source fails either way.
+`source_id` is an id from `master_resume/master.json`. Both fields are
+checked: the id must exist, and `original` must match the master's text at that
+id exactly. A wrong id fails even when the quoted text appears elsewhere in the
+master, so inventing a plausible-looking source does not work.

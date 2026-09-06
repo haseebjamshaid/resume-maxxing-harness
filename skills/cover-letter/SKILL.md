@@ -8,7 +8,7 @@ argument-hint: "[output slug, defaults to the most recent]"
 
 Ported from Resume-Matcher's `COVER_LETTER_PROMPT`, under the same guardrails
 as the resume. Reads `output/<slug>/resume.md`, `jd.md` and
-`master_resume/.ledger.md`.
+`master_resume/master.json`.
 
 If no tailored resume exists for the slug, run `tailor-resume` first. Writing a
 letter against an unverified resume defeats the point of verifying it.
@@ -57,11 +57,11 @@ before. Every sentence should survive being read by someone who is busy.
 
 The 100-150 word cap is a hard limit, not a target. Everything in
 `references/../tailor-resume/references/truthfulness-rules.md` applies: no
-number, technology, credential or outcome that is not in the ledger.
+number, technology, credential or outcome that is not in the master.
 
 A cover letter is the easiest place to fabricate, because prose invites
 narrative and there is no bullet structure holding you to a source. Watch
-specifically for a claim built from two unrelated ledger facts, and for
+specifically for a claim built from two unrelated master facts, and for
 enthusiasm that quietly asserts experience.
 
 Write `output/<slug>/cover-letter.md`, then run the `resume-verifier` agent

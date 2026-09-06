@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "personal": {
+    "name": "Your Name",
+    "title_variants": [
+      "Senior Data Engineer",
+      "Senior Backend Engineer"
+    ],
+    "tagline_variants": [
+      "Python · Distributed Systems"
+    ],
+    "phone": "+00 000 0000000",
+    "email": "you@example.com",
+    "location": "City, Country",
+    "relocation": "open to relocation (EU)",
+    "linkedin": "linkedin.com/in/you",
+    "github": "github.com/you"
+  },
+  "summary_variants": [
+    {
+      "id": "sum.data",
+      "text": "One paragraph, written for data-leaning roles."
+    },
+    {
+      "id": "sum.backend",
+      "text": "One paragraph, written for backend-leaning roles."
+    }
+  ],
+  "skills": [
+    {
+      "id": "skills.languages",
+      "category": "Languages",
+      "items": [
+        "Python",
+        "TypeScript / Node.js",
+        "SQL"
+      ]
+    },
+    {
+      "id": "skills.data-eng",
+      "category": "Data Engineering",
+      "items": [
+        "ClickHouse",
+        "dbt",
+        "ETL / ELT",
+        "CDC"
+      ]
+    }
+  ],
+  "experience": [
+    {
+      "id": "exp.acme",
+      "company": "Acme Corp",
+      "location": "City, Country",
+      "title": "Senior Software Engineer",
+      "dates": "June 2022 - Present",
+      "scope_variants": [
+        {
+          "id": "exp.acme.scope",
+          "text": "One line on the scope of the role."
+        }
+      ],
+      "projects": [
+        {
+          "id": "exp.acme.p1",
+          "name": "Analytics ELT Platform",
+          "name_variants": [
+            "Customer Analytics Pipeline"
+          ],
+          "role": "Data Engineer",
+          "dates": "2025 - present",
+          "bullets": [
+            {
+              "id": "exp.acme.p1.b1",
+              "text": "Owned the transformation layer across 15+ data domains, with every figure written the way you want it to appear."
+            },
+            {
+              "id": "exp.acme.p1.b2",
+              "text": "Implemented CDC merge loading from MySQL into ClickHouse using DLT, covered by 19 pytest suites."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "personal_projects": [
+    {
+      "id": "proj.sidething",
+      "name": "Side Project Name",
+      "stack": "Python · FastAPI · SQLite",
+      "dates": "2024",
+      "bullets": [
+        {
+          "id": "proj.sidething.b1",
+          "text": "What you built and what it does."
+        }
+      ]
+    }
+  ],
+  "education": [
+    {
+      "id": "edu.university",
+      "institution": "Your University",
+      "degree": "BSc Computer Science",
+      "degree_variants": [],
+      "location": "City, Country",
+      "dates": "2018 - 2022"
+    }
+  ],
+  "certifications": [
+    {
+      "id": "cert.example",
+      "text": "Credential name, issuer, year"
+    }
+  ],
+  "needs_review": [
+    {
+      "id": "review.1",
+      "issue": "Short description of a claim you are unsure about.",
+      "detail": "Anything in this list is EXCLUDED from the fact whitelists and cannot be used until you resolve it and move it into a real bullet.",
+      "affects": [
+        "exp.acme.p1.b1"
+      ]
+    }
+  ]
+}

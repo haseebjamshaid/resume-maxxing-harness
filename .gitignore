@@ -7,6 +7,7 @@
 master_resume/*
 !master_resume/.gitkeep
 !master_resume/TEMPLATE.md
+!master_resume/master.example.json
 
 # Per-application output: tailored resumes, cover letters, JDs, provenance
 output/*

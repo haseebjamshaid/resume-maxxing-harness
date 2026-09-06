@@ -50,17 +50,17 @@ produces the only skills later passes are allowed to surface.
 You are a resume skill planning agent. Output only valid JSON with
 target_skills and strategy_notes.
 
-Given the job description and the master ledger, return the job's skills that
-the ledger genuinely supports.
+Given the job description and master_resume/master.json, return the job's
+skills that the master genuinely supports.
 
-{"target_skills": [{"skill": "...", "reason": "ledger id and why it counts"}],
+{"target_skills": [{"skill": "...", "reason": "source id and why it counts"}],
  "strategy_notes": "..."}
 
 Rules:
-- A skill qualifies only if a specific ledger entry demonstrates it. Cite the
-  ledger id in "reason".
+- A skill qualifies only if a specific master entry demonstrates it. Cite the
+  entry id in "reason".
 - You may include a job-description skill that is missing from the current
-  resume, as long as the ledger supports it.
+  resume, as long as the master supports it.
 - Never include a certification.
 - Never include a skill the job description does not ask for.
 - Do not rewrite the resume in this pass.
@@ -70,5 +70,5 @@ Write the result to `output/<slug>/skill-targets.json`.
 
 **This list is a closed whitelist.** The tailoring pass may surface a skill
 only if it appears here. That is what keeps keyword alignment from sliding
-into invention: a skill the job wants and the ledger cannot support simply
+into invention: a skill the job wants and the master cannot support simply
 does not get written, however good the match would look.

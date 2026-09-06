@@ -1,9 +1,9 @@
 """Deterministic extractors and the Facts whitelist.
 
-The same extractors build `.facts.json` from the master ledger AND scan the
-tailored resume. That symmetry is the point: anything the scanner can find in
-the output was, if genuinely present, also found in the ledger. No LLM is
-involved, so the whitelist cannot drift from what it is meant to police.
+The same extractors build the whitelist from `master_resume/master.json` AND
+scan the tailored resume. That symmetry is the point: anything the scanner can
+find in the output was, if genuinely present, also found in the master. No LLM
+is involved, so the whitelist cannot drift from what it is meant to police.
 
 All functions are pure and return new tuples; nothing here mutates its input.
 """
@@ -137,7 +137,7 @@ PROVENANCE_SECTIONS: tuple[str, ...] = ("EXPERIENCE", "PERSONAL PROJECTS")
 
 @dataclass(frozen=True)
 class Facts:
-    """Closed whitelists derived from the master ledger."""
+    """Closed whitelists derived from the master resume JSON."""
 
     numbers: frozenset[str]
     technologies: frozenset[str]
@@ -210,8 +210,8 @@ def strip_dates(text: str) -> str:
     return DATE_RE.sub(" ", text)
 
 
-def extract_numbers(text: str) -> tuple[str, ...]:
-    body = strip_dates(_body_after_header(text))
+def extract_numbers(text: str, *, strip_header: bool = True) -> tuple[str, ...]:
+    body = strip_dates(_body_after_header(text) if strip_header else text)
     seen = {
         normalise_number(m.group())
         for m in NUMBER_RE.finditer(body)
@@ -252,14 +252,17 @@ def _body_after_header(text: str) -> str:
     return _CONTACT_LINE_RE.sub(" ", body)
 
 
-def _candidate_tokens(sentence: str) -> tuple[str, ...]:
-    """Tokens from one sentence, minus the sentence-initial one.
+def _candidate_tokens(
+    sentence: str, *, skip_initial: bool = True
+) -> tuple[str, ...]:
+    """Tokens from one sentence, optionally minus the sentence-initial one.
 
     Slash-joined compounds are split, so `TypeScript/Node.js` is checked as
     its two real names rather than as one unknown string.
     """
     out: list[str] = []
-    for token in TOKEN_RE.findall(sentence)[1:]:  # index 0 is sentence-initial
+    found = TOKEN_RE.findall(sentence)
+    for token in (found[1:] if skip_initial else found):
         for part in token.split("/"):
             bare = part.strip(".,;:!?()[]-")
             if bare:
@@ -293,16 +296,21 @@ def _scannable_sentences(
     return tuple(out)
 
 
-def extract_tech_tokens(text: str) -> tuple[str, ...]:
+def extract_tech_tokens(
+    text: str, *, skip_initial: bool = True
+) -> tuple[str, ...]:
     """Technology-shaped or non-generic capitalised tokens.
 
-    Tokens that open a line or a sentence are skipped: sentence case there
-    carries no signal, so `Rebuilt the path` must not read as a product name.
+    When scanning a resume, tokens that open a line or a sentence are skipped:
+    sentence case there carries no signal, so `Rebuilt the path` must not read
+    as a product name. When building the whitelist from the master the
+    opposite is wanted, since a skills entry like `Python` sits alone on its
+    line and must still be whitelisted, so pass `skip_initial=False`.
     """
     found = [
         token
         for sentence in _scannable_sentences(text)
-        for token in _candidate_tokens(sentence)
+        for token in _candidate_tokens(sentence, skip_initial=skip_initial)
         if _is_candidate(token)
     ]
     return tuple(sorted(set(found)))
@@ -397,26 +405,6 @@ def extract_section(text: str, heading: str) -> str:
 # Building and loading Facts
 # --------------------------------------------------------------------------
 
-def facts_from_text(ledger: str) -> Facts:
-    """Build the whitelist from the master ledger using the same extractors
-    that later police the output."""
-    skills_body = extract_section(ledger, "SKILLS") or ledger
-    certs_body = extract_section(ledger, "CERTIFICATIONS")
-    return Facts(
-        numbers=frozenset(extract_numbers(ledger)),
-        technologies=frozenset(extract_tech_tokens(ledger)),
-        date_ranges=frozenset(extract_date_ranges(ledger)),
-        titles=extract_role_strings(ledger),
-        skills=frozenset(extract_tech_tokens(skills_body)),
-        certifications=frozenset(
-            _norm_space(line.lstrip("-*• ").strip())
-            for line in certs_body.splitlines()
-            if line.strip().startswith(("-", "*", "•"))
-        ),
-        corpus=normalise_text(ledger),
-    )
-
-
 def facts_from_dict(payload: Mapping[str, Any]) -> Facts:
     return Facts(
         numbers=frozenset(
@@ -456,3 +444,213 @@ def load_facts(path: str | Path) -> Facts:
     if not isinstance(payload, dict):
         raise ValueError(f"{target} must contain a JSON object")
     return facts_from_dict(payload)
+
+
+# --------------------------------------------------------------------------
+# Master resume JSON
+# --------------------------------------------------------------------------
+
+# `needs_review` is deliberately excluded from every function below. It holds
+# disputed or superseded claims, and letting its text reach the whitelist or
+# the id index would make exactly the claims you flagged usable again.
+MASTER_REVIEW_KEY = "needs_review"
+
+
+def _texts_from_master(master: Mapping[str, Any]) -> tuple[str, ...]:
+    """Every claim-bearing string in the master. Contact details are omitted:
+    a phone number is not a claim, and the resume header is not scanned."""
+    out: list[str] = []
+    personal = master.get("personal", {}) or {}
+    out.extend(str(v) for v in personal.get("title_variants", ()) or ())
+    out.extend(str(v) for v in personal.get("tagline_variants", ()) or ())
+    out.append(str(personal.get("location", "")))
+
+    for entry in master.get("summary_variants", ()) or ():
+        out.append(str(entry.get("text", "")))
+
+    for row in master.get("skills", ()) or ():
+        out.append(str(row.get("category", "")))
+        out.extend(str(i) for i in row.get("items", ()) or ())
+
+    for employer in master.get("experience", ()) or ():
+        out.extend(
+            str(employer.get(k, ""))
+            for k in ("company", "title", "location")
+        )
+        for scope in employer.get("scope_variants", ()) or ():
+            out.append(str(scope.get("text", "")))
+        for project in employer.get("projects", ()) or ():
+            out.append(str(project.get("name", "")))
+            out.extend(str(n) for n in project.get("name_variants", ()) or ())
+            out.append(str(project.get("role", "")))
+            for bullet in project.get("bullets", ()) or ():
+                out.append(str(bullet.get("text", "")))
+
+    for project in master.get("personal_projects", ()) or ():
+        out.append(str(project.get("name", "")))
+        out.append(str(project.get("stack", "")))
+        for bullet in project.get("bullets", ()) or ():
+            out.append(str(bullet.get("text", "")))
+
+    for school in master.get("education", ()) or ():
+        out.extend(
+            str(school.get(k, ""))
+            for k in ("institution", "degree", "location")
+        )
+        out.extend(str(d) for d in school.get("degree_variants", ()) or ())
+
+    for cert in master.get("certifications", ()) or ():
+        out.append(str(cert.get("text", "")))
+
+    return tuple(t for t in out if t.strip())
+
+
+def _declared_dates(master: Mapping[str, Any]) -> tuple[str, ...]:
+    out: list[str] = []
+    for employer in master.get("experience", ()) or ():
+        out.append(str(employer.get("dates", "")))
+        for project in employer.get("projects", ()) or ():
+            out.append(str(project.get("dates", "")))
+    for project in master.get("personal_projects", ()) or ():
+        out.append(str(project.get("dates", "")))
+    for school in master.get("education", ()) or ():
+        out.append(str(school.get("dates", "")))
+    return tuple(d for d in out if d.strip())
+
+
+def _declared_titles(master: Mapping[str, Any]) -> tuple[str, ...]:
+    personal = master.get("personal", {}) or {}
+    out = [str(t) for t in personal.get("title_variants", ()) or ()]
+    for employer in master.get("experience", ()) or ():
+        out.append(str(employer.get("title", "")))
+        for project in employer.get("projects", ()) or ():
+            out.append(str(project.get("role", "")))
+    return tuple(t for t in out if t.strip())
+
+
+def _declared_skills(master: Mapping[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        str(item)
+        for row in master.get("skills", ()) or ()
+        for item in row.get("items", ()) or ()
+        if str(item).strip()
+    )
+
+
+def index_master_by_id(master: Mapping[str, Any]) -> dict[str, str]:
+    """Map every id in the master to its exact text.
+
+    Provenance is checked against this, so a source id either resolves to text
+    that matches character for character or the bullet is unverifiable. That
+    is stricter than searching a blob: a wrong id fails even when the quoted
+    text happens to appear somewhere else in the master.
+    """
+    index: dict[str, str] = {}
+
+    def put(key: Any, value: Any) -> None:
+        if key and str(value).strip():
+            index[str(key)] = str(value)
+
+    for entry in master.get("summary_variants", ()) or ():
+        put(entry.get("id"), entry.get("text"))
+    for row in master.get("skills", ()) or ():
+        put(row.get("id"), ", ".join(str(i) for i in row.get("items", ()) or ()))
+    for employer in master.get("experience", ()) or ():
+        put(employer.get("id"), employer.get("company"))
+        for scope in employer.get("scope_variants", ()) or ():
+            put(scope.get("id"), scope.get("text"))
+        for project in employer.get("projects", ()) or ():
+            put(project.get("id"), project.get("name"))
+            for bullet in project.get("bullets", ()) or ():
+                put(bullet.get("id"), bullet.get("text"))
+    for project in master.get("personal_projects", ()) or ():
+        put(project.get("id"), project.get("name"))
+        for bullet in project.get("bullets", ()) or ():
+            put(bullet.get("id"), bullet.get("text"))
+    for school in master.get("education", ()) or ():
+        put(school.get("id"), school.get("degree"))
+    for cert in master.get("certifications", ()) or ():
+        put(cert.get("id"), cert.get("text"))
+    return index
+
+
+def facts_from_master_json(master: Mapping[str, Any]) -> Facts:
+    """Build the closed whitelists from the master resume JSON."""
+    texts = _texts_from_master(master)
+    blob = "\n".join(texts)
+    skills = _declared_skills(master)
+
+    declared = {normalise_date(d) for d in _declared_dates(master)}
+    inline = set(extract_date_ranges(blob))
+
+    technologies = set(extract_tech_tokens(blob, skip_initial=False))
+    # Skills entries are technologies by declaration, so whitelist each entry
+    # whole as well as its tokens ("SQLite / sqlite-vec" as written).
+    technologies.update(s for s in skills if s)
+
+    return Facts(
+        numbers=frozenset(extract_numbers(blob, strip_header=False)),
+        technologies=frozenset(technologies),
+        date_ranges=frozenset(declared | inline),
+        titles=_declared_titles(master),
+        skills=frozenset(skills),
+        certifications=frozenset(
+            str(c.get("text", ""))
+            for c in master.get("certifications", ()) or ()
+            if str(c.get("text", "")).strip()
+        ),
+        corpus=normalise_text(blob),
+    )
+
+
+def load_master(path: str | Path) -> dict[str, Any]:
+    target = Path(path)
+    if not target.is_file():
+        raise FileNotFoundError(
+            f"master resume not found: {target}\n"
+            "Create it from master_resume/TEMPLATE.md."
+        )
+    try:
+        payload = json.loads(target.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{target} is not valid JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{target} must contain a JSON object")
+    return payload
+
+
+def validate_master(master: Mapping[str, Any]) -> tuple[str, ...]:
+    """Structural problems that would silently disable a guardrail."""
+    problems: list[str] = []
+    if not master.get("certifications"):
+        problems.append(
+            "no 'certifications': the no-drop check protects nothing"
+        )
+    if not (master.get("personal", {}) or {}).get("title_variants"):
+        problems.append(
+            "no 'personal.title_variants': the seniority ceiling is disabled"
+        )
+    if not master.get("experience"):
+        problems.append("no 'experience' entries")
+    if not master.get("skills"):
+        problems.append("no 'skills' rows")
+
+    index = index_master_by_id(master)
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for employer in master.get("experience", ()) or ():
+        for project in employer.get("projects", ()) or ():
+            for bullet in project.get("bullets", ()) or ():
+                bid = str(bullet.get("id", ""))
+                if not bid:
+                    problems.append(
+                        f"bullet with no id in {project.get('name', '?')!r}"
+                    )
+                elif bid in seen:
+                    duplicates.add(bid)
+                seen.add(bid)
+    for dup in sorted(duplicates):
+        problems.append(f"duplicate id {dup!r}: provenance would be ambiguous")
+    if not index:
+        problems.append("no ids found: provenance cannot be verified")
+    return tuple(problems)

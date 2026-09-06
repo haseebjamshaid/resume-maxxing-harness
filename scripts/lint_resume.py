@@ -1,16 +1,16 @@
 """Layer 3: deterministic anti-fabrication guardrails.
 
-Compares a tailored resume against the closed whitelists in `.facts.json`,
-which `resume_facts.facts_from_text` derives from the master ledger using the
-same extractors. No model is involved, so these checks cannot be argued with.
+Compares a tailored resume against closed whitelists derived from
+`master_resume/master.json` by the same extractors that later enforce them. No
+model is involved, so these checks cannot be argued with.
 
 What this layer does NOT do: judge meaning. Claim inflation, implied scope and
 unsupported causal claims are Layer 4's job (see agents/resume-verifier.md).
 
 Usage:
-    lint_resume.py facts  --ledger PATH [--out PATH]
-    lint_resume.py check  RESUME.md --facts PATH [--provenance PATH]
-                          [--ledger PATH] [--jd-keywords PATH] [--json]
+    lint_resume.py facts --master master_resume/master.json [--out PATH]
+    lint_resume.py check RESUME.md --master master_resume/master.json
+                         [--provenance PATH] [--jd-keywords PATH] [--json]
 """
 
 from __future__ import annotations
@@ -44,9 +44,12 @@ from resume_facts import (  # noqa: E402
     extract_proper_phrases,
     extract_tech_tokens,
     facts_from_dict,
-    facts_from_text,
+    facts_from_master_json,
     facts_to_dict,
+    index_master_by_id,
     load_facts,
+    load_master,
+    validate_master,
     normalise_date,
     normalise_number,
     normalise_text,
@@ -74,14 +77,14 @@ class Violation:
     kind: str
     location: str
     detail: str
-    ledger_id: str | None = None
+    source_id: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "kind": self.kind,
             "location": self.location,
             "detail": self.detail,
-            "ledger_id": self.ledger_id,
+            "source_id": self.source_id,
         }
 
 
@@ -216,12 +219,17 @@ def check_seniority(resume: str, facts: Facts) -> tuple[Violation, ...]:
 
 
 def check_provenance(
-    resume: str, provenance: Mapping[str, Any], ledger: str
+    resume: str, provenance: Mapping[str, Any], master_index: Mapping[str, str]
 ) -> tuple[Violation, ...]:
-    """Bullets need a source, and that source must exist in the ledger."""
+    """Bullets need a source id, and it must resolve to matching master text.
+
+    Checking against an id index rather than searching the master as a blob
+    means a wrong id fails even when the quoted text happens to appear
+    elsewhere, and a fabricated bullet cannot be laundered by inventing a
+    plausible-looking source.
+    """
     records: Sequence[Mapping[str, Any]] = provenance.get("emitted") or ()
     values = {normalise_text(str(r.get("value", ""))) for r in records}
-    ledger_norm = normalise_text(ledger)
     out: list[Violation] = []
 
     for location, text in extract_bullets(resume, PROVENANCE_SECTIONS):
@@ -235,14 +243,31 @@ def check_provenance(
             )
 
     for record in records:
-        original = normalise_text(str(record.get("original", "")))
-        if not original or original not in ledger_norm:
+        source_id = str(record.get("source_id", "")).strip()
+        path = str(record.get("path", "unknown"))
+        if not source_id:
+            out.append(
+                Violation("unverifiable_source", path,
+                          "provenance record has no source_id")
+            )
+            continue
+        if source_id not in master_index:
             out.append(
                 Violation(
-                    "unverifiable_source",
-                    str(record.get("path", "unknown")),
-                    "provenance 'original' is not present in the master ledger",
-                    ledger_id=record.get("ledger_id"),
+                    "unverifiable_source", path,
+                    f"source_id {source_id!r} does not exist in the master",
+                    source_id=source_id,
+                )
+            )
+            continue
+        original = normalise_text(str(record.get("original", "")))
+        if original != normalise_text(master_index[source_id]):
+            out.append(
+                Violation(
+                    "unverifiable_source", path,
+                    "provenance 'original' does not match the master text at "
+                    f"{source_id!r}",
+                    source_id=source_id,
                 )
             )
     return tuple(out)
@@ -404,7 +429,7 @@ def lint(
     resume: str,
     facts: Facts,
     provenance: Mapping[str, Any],
-    ledger: str,
+    master_index: Mapping[str, str],
     jd_keywords: Mapping[str, Any],
     budget: Budget,
 ) -> Report:
@@ -414,7 +439,7 @@ def lint(
         + check_technologies(resume, facts)
         + check_dates(resume, facts)
         + check_seniority(resume, facts)
-        + check_provenance(resume, provenance, ledger)
+        + check_provenance(resume, provenance, master_index)
         + no_drop_violations
         + check_phrases(resume)
         + check_budget(resume, budget)
@@ -469,7 +494,7 @@ def _render(report: Report) -> str:
         lines.append("")
         lines.append(f"{len(report.violations)} violation(s):")
         for v in report.violations:
-            suffix = f"  [{v.ledger_id}]" if v.ledger_id else ""
+            suffix = f"  [{v.source_id}]" if v.source_id else ""
             lines.append(f"  - {v.kind} @ {v.location}: {v.detail}{suffix}")
     for note in report.notes:
         lines.append(f"  note: {note}")
@@ -477,26 +502,37 @@ def _render(report: Report) -> str:
 
 
 def _cmd_facts(args: argparse.Namespace) -> int:
-    facts = facts_from_text(_read(args.ledger, "ledger"))
+    master = load_master(args.master)
+    problems = validate_master(master)
+    facts = facts_from_master_json(master)
     payload = json.dumps(facts_to_dict(facts), indent=2, ensure_ascii=False)
     if args.out:
         Path(args.out).write_text(payload + "\n", encoding="utf-8")
-        counts = {k: len(v) for k, v in facts_to_dict(facts).items()}
+        counts = {
+            k: len(v) for k, v in facts_to_dict(facts).items() if k != "corpus"
+        }
         print(f"wrote {args.out}: {counts}")
+        print(f"ids indexed: {len(index_master_by_id(master))}")
     else:
         print(payload)
+    for problem in problems:
+        print(f"warning: {problem}", file=sys.stderr)
     return 0
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
+    master = load_master(args.master)
     budget = Budget()
     if args.total_words:
         budget = replace(budget, total_words=args.total_words)
     report = lint(
         resume=_read(args.resume, "resume"),
-        facts=load_facts(args.facts),
+        facts=(
+            load_facts(args.facts) if args.facts
+            else facts_from_master_json(master)
+        ),
         provenance=_read_json(args.provenance, "provenance"),
-        ledger=_read(args.ledger, "ledger"),
+        master_index=index_master_by_id(master),
         jd_keywords=_read_json(args.jd_keywords, "jd keywords"),
         budget=budget,
     )
@@ -511,16 +547,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    facts_cmd = sub.add_parser("facts", help="build .facts.json from a ledger")
-    facts_cmd.add_argument("--ledger", required=True)
+    facts_cmd = sub.add_parser(
+        "facts", help="build the fact whitelists from master.json"
+    )
+    facts_cmd.add_argument("--master", required=True)
     facts_cmd.add_argument("--out")
     facts_cmd.set_defaults(func=_cmd_facts)
 
     check = sub.add_parser("check", help="run the guardrails on a resume")
     check.add_argument("resume")
-    check.add_argument("--facts", required=True)
+    check.add_argument("--master", required=True)
+    check.add_argument("--facts", help="optional cached .facts.json")
     check.add_argument("--provenance")
-    check.add_argument("--ledger")
     check.add_argument("--jd-keywords", dest="jd_keywords")
     check.add_argument("--total-words", type=int)
     check.add_argument("--json", action="store_true")
