@@ -21,7 +21,7 @@ One paragraph. No bullet points.
 ### COMPANY NAME | Job Title | June 2022 - Present
 One-line scope statement for the role.
 
-#### Project Name *(Role, 2025 - ongoing)*
+#### Project Name *(Role)*
 - **Bold lead-in claim** then plain continuation naming the specific tech.
 - **Second claim** with the concrete figure copied from the master.
 
@@ -45,7 +45,7 @@ Location.
 | Header | Copied from the master except the title line. Never invent contact details. |
 | SUMMARY | Prose, no bullets. |
 | SKILLS | `**Category**` then a comma list. Reorder categories and items by relevance. |
-| EXPERIENCE | Employer, then projects nested beneath. **Client work only.** |
+| EXPERIENCE | Employer, then projects nested beneath. **Client work only.** Project lines carry the role, not years: the employer line holds the dates, and per-project years make early tenure look empty when recent projects are selected. |
 | PERSONAL PROJECTS | Own top-level section. Droppable when space is tight. |
 | EDUCATION | Copied verbatim. The degree name may never be altered. |
 | CERTIFICATIONS | **Always emitted.** Never drop an entry. |
@@ -95,7 +95,7 @@ per-bullet cap.
 | Total | 1,250 words |
 | SUMMARY | 90 words |
 | SKILLS | 10 category rows |
-| Experience projects | 4 |
+| Experience projects | no fixed count; bounded by the word total |
 | Bullets per project | 5 |
 | Words per bullet | 32 |
 | Personal projects | 3, at 3 bullets each |

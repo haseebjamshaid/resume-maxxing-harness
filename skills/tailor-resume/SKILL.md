@@ -60,6 +60,10 @@ The command prints its counts and any structural warnings. **Read them.**
 the no-drop check protects nothing. Both are silent guardrail failures, so say
 so rather than proceeding on a weak foundation.
 
+It also prints `years_experience`, derived from the earliest employer start
+date. Where master text says `{years_experience}`, write that figure. The
+placeholder itself fails the linter, and so does any other figure.
+
 Anything under the master's `needs_review` key is deliberately excluded from
 the whitelists. Those are claims the user flagged as disputed or superseded,
 so they are unusable until resolved. If the job would be well served by one of
@@ -83,7 +87,7 @@ Selection first, and it is the part that matters. With a superset master, most
 of the work is deciding what earns space.
 
 1. Score each master project against `jd-keywords.json`.
-2. Keep the top 4 employer projects and up to 3 personal projects, inside the
+2. Keep every employer project that earns its space and up to 3 personal projects, inside the
    `references/output-format.md` budget.
 3. Pick the `title_variants` and `summary_variants` entry that fits the role,
    and reorder the SKILLS categories by relevance. All three change emphasis
@@ -149,5 +153,40 @@ check to get a pass.
 
 Then report: the output path, the ATS score, what you cut and why, the title
 line you chose, and any warnings the verifier raised.
+
+## Stage 7 - Record the gaps
+
+Runs whether the resume shipped or stayed a draft. The posting's asks that the
+master could not support are already known from Stage 2: every
+`required_skills` and `preferred_skills` entry in `jd-keywords.json` that did
+not make it into `skill-targets.json`. Fold them into
+`master_resume/gaps.json` so they outlive this run.
+
+For each unsupported skill:
+
+- **Already listed** (match on `skill` or any `aliases` entry, case-insensitive):
+  append `{"posting": "<slug>", "level": "required" | "preferred"}` to
+  `seen_in` unless this slug is already there, and bump the matching count.
+- **New and concrete** (a technology, platform, protocol or domain): add an
+  entry with `status: "open"` and `closed_by: null`. Group near-synonyms under
+  one entry through `aliases` rather than adding a second one.
+- **New but vague** (`clean code`, `ownership`, `full-stack development`):
+  skip it. These are not buildable gaps.
+
+Then reconcile: for every `open` gap, check whether the current master now
+supports it. If a specific master entry does, set `status: "closed"` and put
+that entry's id in `closed_by`. Set `updated` to today's date.
+
+If `gaps.json` is missing, create it with `schema_version`, `updated`, `purpose`
+and an empty `gaps` list before appending.
+
+**This file is planning input and nothing else.** It never feeds
+`.facts.json`, `skill-targets.json` or a draft. A gap being listed, or a
+project idea being proposed for it, supports no claim: the only way a gap
+reaches a resume is real work added to `master.json` first.
+
+Add to the report: which gaps this posting added or bumped, and the top
+recurring open gaps by `required_count`. Do not push the file anywhere; say it
+changed so the user can sync their private copy.
 
 Offer the `cover-letter` skill rather than writing one unasked.
