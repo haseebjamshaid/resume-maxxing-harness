@@ -36,6 +36,10 @@ flagged as disputed or superseded, and they are excluded from the whitelists on
 purpose. A draft that uses one is fabricating, even though the text does appear
 in the file. Treat any such use as a BLOCKER and name the review id.
 
+Master text may contain `{years_experience}`. It stands for whole years from the
+earliest employer start date to today, and `lint_resume.py facts` prints the
+value. The resume must show exactly that figure; any other is fabricated.
+
 ## Run the deterministic layer first
 
 ```bash

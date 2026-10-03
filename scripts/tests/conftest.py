@@ -83,6 +83,7 @@ MASTER: dict = {
             "degree": "BSc Engineering",
             "location": "Test City",
             "dates": "2018 - 2022",
+            "coursework": ["Machine Learning", "Digital Signal Processing"],
         }
     ],
     "certifications": [{"id": "cert.ielts", "text": "IELTS 8.5"}],

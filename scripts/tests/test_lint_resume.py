@@ -360,3 +360,36 @@ def test_lint_passes_a_clean_resume(facts, master_index) -> None:
     )
     assert report.violations == (), [v.as_dict() for v in report.violations]
     assert report.ok is True
+
+
+def test_master_coursework_is_whitelisted(facts) -> None:
+    """The optional EDUCATION coursework line is a sanctioned output, so the
+    course names behind it must reach the technology whitelist."""
+    # Arrange
+    resume = "*Relevant coursework:* Machine Learning, Digital Signal Processing."
+
+    # Act
+    violations = lr.check_technologies(resume, facts)
+
+    # Assert
+    assert violations == (), [v.as_dict() for v in violations]
+
+
+def test_personal_background_is_whitelisted() -> None:
+    """Biographical facts a cover letter may state (where the candidate grew
+    up, for how long) live in personal.background and must be whitelisted."""
+    # Arrange
+    import copy
+    from conftest import MASTER
+    master = copy.deepcopy(MASTER)
+    master["personal"] = {
+        **master["personal"],
+        "background": ["Grew up in Testland for 16 years."],
+    }
+    facts = rf.facts_from_master_json(master)
+
+    # Act
+    violations = lr.check_numbers("## SUMMARY\nLived in Testland for 16 years.", facts)
+
+    # Assert
+    assert violations == (), [v.as_dict() for v in violations]

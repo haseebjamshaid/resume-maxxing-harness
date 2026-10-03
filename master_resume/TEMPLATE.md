@@ -41,8 +41,8 @@ Record them in the form you want to use.
 
 | Key | Holds |
 |---|---|
-| `personal` | Name and contact. `title_variants` are positioning lines the tailorer picks between. |
-| `summary_variants` | Two or three summaries aimed at different role types. |
+| `personal` | Name and contact. `title_variants` are positioning lines the tailorer picks between. `background` holds biographical facts a cover letter may use, such as where you grew up. |
+| `summary_variants` | Two or three summaries aimed at different role types. Write years of experience as `{years_experience}+ years`, never as a figure: it is derived from the earliest employer start date on every run, so it cannot go stale. |
 | `skills` | Rows of `{id, category, items}`. Include everything. |
 | `experience` | Employers, each with `projects`, each with `bullets`. **Client work only.** |
 | `personal_projects` | Side projects. Their own section, never nested under an employer. |

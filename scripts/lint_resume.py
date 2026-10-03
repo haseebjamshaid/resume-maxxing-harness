@@ -20,6 +20,7 @@ import json
 import re
 import sys
 from dataclasses import dataclass, replace
+from datetime import date
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -56,6 +57,7 @@ from resume_facts import (  # noqa: E402
     strip_dates,
     _body_after_header,
     _ranks_in,
+    derive_years_experience,
 )
 
 ATS_WEIGHT_KEYWORDS = 0.55
@@ -70,6 +72,7 @@ _ATS_SECTIONS: Mapping[str, str] = {
 }
 
 _PUNCTUATION_PHRASES = ("—", "---", "--")
+_PLACEHOLDER_RE = re.compile(r"\{[a-z_]+\}")
 
 
 @dataclass(frozen=True)
@@ -325,6 +328,19 @@ def check_phrases(resume: str) -> tuple[Violation, ...]:
     return tuple(out)
 
 
+def check_placeholders(resume: str) -> tuple[Violation, ...]:
+    """A master placeholder such as `{years_experience}` copied into the
+    resume instead of the value `facts` derives for it."""
+    return tuple(
+        Violation(
+            "unresolved_placeholder",
+            "resume body",
+            f"{match.group()!r}: write the value `lint_resume.py facts` prints",
+        )
+        for match in _PLACEHOLDER_RE.finditer(resume)
+    )
+
+
 def check_budget(resume: str, budget: Budget) -> tuple[Violation, ...]:
     out: list[Violation] = []
     words = len(resume.split())
@@ -442,6 +458,7 @@ def lint(
         + check_provenance(resume, provenance, master_index)
         + no_drop_violations
         + check_phrases(resume)
+        + check_placeholders(resume)
         + check_budget(resume, budget)
         + check_headings(resume)
     )
@@ -513,6 +530,9 @@ def _cmd_facts(args: argparse.Namespace) -> int:
         }
         print(f"wrote {args.out}: {counts}")
         print(f"ids indexed: {len(index_master_by_id(master))}")
+        years = derive_years_experience(master, date.today())
+        if years is not None:
+            print(f"years_experience (derived from employer start dates): {years}")
     else:
         print(payload)
     for problem in problems:

@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -465,6 +466,8 @@ def _texts_from_master(master: Mapping[str, Any]) -> tuple[str, ...]:
     personal = master.get("personal", {}) or {}
     out.extend(str(v) for v in personal.get("title_variants", ()) or ())
     out.extend(str(v) for v in personal.get("tagline_variants", ()) or ())
+    # Biographical facts a cover letter may state, e.g. where you grew up.
+    out.extend(str(v) for v in personal.get("background", ()) or ())
     out.append(str(personal.get("location", "")))
 
     for entry in master.get("summary_variants", ()) or ():
@@ -500,6 +503,9 @@ def _texts_from_master(master: Mapping[str, Any]) -> tuple[str, ...]:
             for k in ("institution", "degree", "location")
         )
         out.extend(str(d) for d in school.get("degree_variants", ()) or ())
+        # Course names are claim-bearing: output-format.md sanctions an
+        # optional coursework line, so they have to reach the whitelist.
+        out.extend(str(c) for c in school.get("coursework", ()) or ())
 
     for cert in master.get("certifications", ()) or ():
         out.append(str(cert.get("text", "")))
@@ -605,7 +611,87 @@ def facts_from_master_json(master: Mapping[str, Any]) -> Facts:
     )
 
 
-def load_master(path: str | Path) -> dict[str, Any]:
+# --------------------------------------------------------------------------
+# Derived values
+# --------------------------------------------------------------------------
+
+# Years of experience are written into the master as this placeholder, not as
+# a figure, so the number cannot go stale or disagree between summaries.
+# `load_master` fills it in before any whitelist is built.
+YEARS_PLACEHOLDER = "{years_experience}"
+
+_START_RE = re.compile(
+    rf"^\s*(?:({_MONTH})\s+)?((?:19|20)\d{{2}})\b", re.IGNORECASE
+)
+_MONTH_NUMBER: Mapping[str, int] = {
+    name: number
+    for number, name in enumerate(
+        ("jan", "feb", "mar", "apr", "may", "jun",
+         "jul", "aug", "sep", "oct", "nov", "dec"),
+        start=1,
+    )
+}
+# A start given as a bare year is read as December, so the derived figure can
+# understate experience but never overstate it.
+_UNKNOWN_START_MONTH = 12
+
+
+def _start_of(dates: str) -> tuple[int, int] | None:
+    match = _START_RE.match(dates)
+    if not match:
+        return None
+    month_name, year = match.groups()
+    month = (
+        _MONTH_NUMBER[month_name[:3].lower()] if month_name
+        else _UNKNOWN_START_MONTH
+    )
+    return int(year), month
+
+
+def derive_years_experience(
+    master: Mapping[str, Any], today: date
+) -> int | None:
+    """Whole years from the earliest employer start date to `today`."""
+    starts = [
+        start
+        for employer in master.get("experience", ()) or ()
+        if (start := _start_of(str(employer.get("dates", "")))) is not None
+    ]
+    if not starts:
+        return None
+    year, month = min(starts)
+    return today.year - year - (1 if today.month < month else 0)
+
+
+def _replace_in(value: Any, old: str, new: str) -> Any:
+    """A copy of `value` with `old` replaced in every string it contains."""
+    if isinstance(value, str):
+        return value.replace(old, new)
+    if isinstance(value, Mapping):
+        return {k: _replace_in(v, old, new) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_replace_in(v, old, new) for v in value]
+    return value
+
+
+def resolve_master(
+    master: Mapping[str, Any], today: date | None = None
+) -> dict[str, Any]:
+    """A copy of the master with derived values filled in."""
+    if YEARS_PLACEHOLDER not in json.dumps(master, ensure_ascii=False):
+        return dict(master)
+    years = derive_years_experience(master, today or date.today())
+    if years is None:
+        raise ValueError(
+            f"master uses {YEARS_PLACEHOLDER} but no experience entry has a "
+            "start date to derive it from (e.g. 'June 2022 - Present')"
+        )
+    return _replace_in(master, YEARS_PLACEHOLDER, str(years))
+
+
+def load_master(path: str | Path, today: date | None = None) -> dict[str, Any]:
+    """Read the master and fill in derived values such as years of
+    experience, so every consumer sees the same resolved text."""
     target = Path(path)
     if not target.is_file():
         raise FileNotFoundError(
@@ -618,7 +704,7 @@ def load_master(path: str | Path) -> dict[str, Any]:
         raise ValueError(f"{target} is not valid JSON: {exc}") from exc
     if not isinstance(payload, dict):
         raise ValueError(f"{target} must contain a JSON object")
-    return payload
+    return resolve_master(payload, today)
 
 
 def validate_master(master: Mapping[str, Any]) -> tuple[str, ...]:
